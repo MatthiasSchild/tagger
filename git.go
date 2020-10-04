@@ -1,7 +1,9 @@
 package main
 
 import (
-	"log"
+	"fmt"
+	"os"
+	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
@@ -16,7 +18,15 @@ func getCurrentVersion() Version {
 
 	output, err := execute("git", "tag")
 	if err != nil {
-		log.Fatal(err)
+		if exit, ok := err.(*exec.ExitError); ok {
+			if exit.ExitCode() == 128 {
+				fmt.Println("git exited with status 128. Are you in a git repository?")
+				os.Exit(1)
+			}
+		}
+
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
 	for _, tagString := range strings.Split(output, "\n") {

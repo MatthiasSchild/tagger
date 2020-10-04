@@ -62,8 +62,11 @@ func increaseVersion(strategy Strategy, version *Version) {
 		version.Patch += 1
 	case StrategyIncreaseMinor:
 		version.Minor += 1
+		version.Patch = 0
 	case StrategyIncreaseMajor:
 		version.Major += 1
+		version.Minor = 0
+		version.Patch = 0
 	case StrategyDateTime:
 		unix := time.Now().Unix()
 		version.Minor = int(unix % (60 * 60 * 24)) // date
