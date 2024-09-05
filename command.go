@@ -35,9 +35,10 @@ so the version will result in v1.18262.30600
 `
 
 var RootCmd = &cobra.Command{
-	Use:   "tagger",
-	Short: "Create a new git tag",
-	Long:  rootCmdDescription,
+	Use:          "tagger",
+	Short:        "Create a new git tag",
+	Long:         rootCmdDescription,
+	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		err := validateFlags()
 		if err != nil {

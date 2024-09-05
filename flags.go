@@ -20,7 +20,7 @@ func validateFlags() error {
 	}
 
 	// Only one of those are allowed to be set: major, minor, patch
-	if (flagMajor && flagMinor) || (flagMajor && flagPatch) || (flagMinor || flagPatch) {
+	if (flagMajor && flagMinor) || (flagMajor && flagPatch) || (flagMinor && flagPatch) {
 		return fmt.Errorf("only one of those are allowed: --major, --minor, --patch")
 	}
 
