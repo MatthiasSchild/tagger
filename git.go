@@ -30,11 +30,21 @@ func getAllGitTags() ([]Tag, error) {
 				continue
 			}
 
-			result = append(result, Tag{major, minor, patch})
+			result = append(result, Tag{major, minor, patch, ""})
 		}
 	}
 
 	return result, nil
+}
+
+func getCurrentGitHash() (string, error) {
+	cmd := exec.Command("git", "rev-parse", "HEAD")
+	out, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+
+	return strings.Trim(string(out), "\r\n\t "), nil
 }
 
 func getLatestTag(tags []Tag) Tag {
