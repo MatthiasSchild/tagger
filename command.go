@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	versionRegex = regexp.MustCompile("^v?(\\d+)\\.(\\d+)\\.(\\d+)$")
+	versionRegex = regexp.MustCompile("^v?(\\d+)\\.(\\d+)\\.(\\d+)([+-]([a-zA-Z0-9]))?$")
 )
 
 const rootCmdDescription = `---------------------------------
@@ -192,8 +192,72 @@ var ListCmd = &cobra.Command{
 	},
 }
 
+var NpmCmd = &cobra.Command{
+	Use:          "npm",
+	Short:        "Tag commit using package.json",
+	Long:         "Read the version from the package.json file and tag the current commit this version",
+	SilenceUsage: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		newTag, err := readVersionFromPackageJson()
+		if err != nil {
+			return err
+		}
+
+		tags, err := getAllGitTags()
+		if err != nil {
+			return fmt.Errorf("failed to fetch git tags for validation: %s", err.Error())
+		}
+
+		for _, tag := range tags {
+			if tag.Equals(newTag) {
+				return fmt.Errorf("version tag already created: %s", tag.String())
+			}
+		}
+
+		err = createTag(newTag)
+		if err != nil {
+			return fmt.Errorf("failed to create tag: %s", err.Error())
+		}
+
+		fmt.Printf("Tagged %s\n", newTag)
+		return nil
+	},
+}
+
+var FlutterCmd = &cobra.Command{
+	Use:          "flutter",
+	Short:        "Tag commit using pubspec.yaml",
+	Long:         "Read the version from the pubspec.yaml file and tag the current commit this version",
+	SilenceUsage: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		newTag, err := readVersionFromPubspecYaml()
+		if err != nil {
+			return err
+		}
+
+		tags, err := getAllGitTags()
+		if err != nil {
+			return fmt.Errorf("failed to fetch git tags for validation: %s", err.Error())
+		}
+
+		for _, tag := range tags {
+			if tag.Equals(newTag) {
+				return fmt.Errorf("version tag already created: %s", tag.String())
+			}
+		}
+
+		err = createTag(newTag)
+		if err != nil {
+			return fmt.Errorf("failed to create tag: %s", err.Error())
+		}
+
+		fmt.Printf("Tagged %s\n", newTag)
+		return nil
+	},
+}
+
 func init() {
-	RootCmd.AddCommand(TagCmd, ListCmd)
+	RootCmd.AddCommand(TagCmd, ListCmd, NpmCmd, FlutterCmd)
 
 	RootCmd.Flags().BoolVar(&flagMajor, "major", false, "Increase major part")
 	RootCmd.Flags().BoolVar(&flagMinor, "minor", false, "Increase minor part")

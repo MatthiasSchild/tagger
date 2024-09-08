@@ -1,5 +1,11 @@
 # Tagger Changelog
 
+## v1.3.0 - 2024-09-08
+
+- feat: Added 'npm' command to tag depending on package.json
+- feat: Added 'flutter' command to tag depending on pubspec.yaml
+- fix: Removed double error output
+
 ## v1.2.0 - 2024-09-08
 
 - feat: Added 'tag' command to create a tag
