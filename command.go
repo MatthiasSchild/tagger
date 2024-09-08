@@ -2,10 +2,16 @@ package main
 
 import (
 	"fmt"
-	"os"
+	"regexp"
+	"strconv"
 	"time"
 
+	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
+)
+
+var (
+	versionRegex = regexp.MustCompile("^v?(\\d+)\\.(\\d+)\\.(\\d+)$")
 )
 
 const rootCmdDescription = `---------------------------------
@@ -85,9 +91,7 @@ var RootCmd = &cobra.Command{
 		if !flagDry {
 			err = createTag(newTag)
 			if err != nil {
-				fmt.Println("Failed to create tag")
-				fmt.Println(err)
-				os.Exit(1)
+				return fmt.Errorf("failed to create tag: %s", err.Error())
 			}
 		}
 
@@ -96,7 +100,101 @@ var RootCmd = &cobra.Command{
 	},
 }
 
+var TagCmd = &cobra.Command{
+	Use:          "tag",
+	Short:        "Create a tag without looking up current tags",
+	Long:         "Create a tag using the user input, instead of searching the latest tag and create a tag depending on it",
+	SilenceUsage: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) > 1 {
+			return fmt.Errorf("usage: tagger tag [version]")
+		}
+
+		var userInput string
+		if len(args) == 1 {
+			userInput = args[0]
+		} else {
+			prompt := promptui.Prompt{
+				Label: "New version",
+				Validate: func(s string) error {
+					if !versionRegex.MatchString(s) {
+						return fmt.Errorf("the version must be in the format v1.2.3")
+					}
+					return nil
+				},
+			}
+			result, err := prompt.Run()
+
+			if err != nil {
+				return fmt.Errorf("prompt failed %v", err)
+			}
+
+			userInput = result
+		}
+
+		groups := versionRegex.FindStringSubmatch(userInput)
+
+		if groups == nil {
+			return fmt.Errorf("the version must be in the format v1.2.3")
+		}
+
+		major, _ := strconv.Atoi(groups[1])
+		minor, _ := strconv.Atoi(groups[2])
+		patch, _ := strconv.Atoi(groups[3])
+		newTag := Tag{
+			Major:    major,
+			Minor:    minor,
+			Patch:    patch,
+			Addition: "",
+		}
+
+		tags, err := getAllGitTags()
+		if err != nil {
+			return fmt.Errorf("failed to fetch git tags for validation: %s", err.Error())
+		}
+
+		for _, tag := range tags {
+			if tag.Equals(newTag) {
+				return fmt.Errorf("version tag already created: %s", tag.String())
+			}
+		}
+
+		err = createTag(newTag)
+		if err != nil {
+			return fmt.Errorf("failed to create tag: %s", err.Error())
+		}
+
+		fmt.Printf("Tagged %s\n", newTag)
+		return nil
+	},
+}
+
+var ListCmd = &cobra.Command{
+	Use:          "list",
+	Short:        "List current set version tags",
+	Long:         "List current set version tags",
+	SilenceUsage: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		tags, err := getAllGitTags()
+		if err != nil {
+			return fmt.Errorf("failed to fetch git tags: %s", err.Error())
+		}
+
+		if len(tags) == 0 {
+			return fmt.Errorf("no tags found")
+		}
+
+		for _, tag := range tags {
+			fmt.Println(tag)
+		}
+
+		return nil
+	},
+}
+
 func init() {
+	RootCmd.AddCommand(TagCmd, ListCmd)
+
 	RootCmd.Flags().BoolVar(&flagMajor, "major", false, "Increase major part")
 	RootCmd.Flags().BoolVar(&flagMinor, "minor", false, "Increase minor part")
 	RootCmd.Flags().BoolVar(&flagPatch, "patch", false, "Increase patch part")

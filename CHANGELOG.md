@@ -1,5 +1,10 @@
 # Tagger Changelog
 
+## v1.2.0 - 2024-09-08
+
+- feat: Added 'tag' command to create a tag
+- feat: Added 'list' command to list current versions
+
 ## v1.1.0 - 2024-09-05
 
 - feat: Switched to cobra for unix styled flags

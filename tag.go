@@ -25,6 +25,12 @@ func (t Tag) String() string {
 	return result
 }
 
+// Equals checks if the major, minor and the patch part of two versions are equal.
+// The addition part will be ignored.
+func (t Tag) Equals(tag Tag) bool {
+	return (t.Major == tag.Major) && (t.Minor == tag.Minor) && (t.Patch == tag.Patch)
+}
+
 // Clone clones the Tag structure.
 // The addition will be removed from the copy.
 func (t Tag) Clone() Tag {
