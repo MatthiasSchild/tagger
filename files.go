@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"strconv"
 
 	"gopkg.in/yaml.v3"
@@ -40,6 +41,24 @@ func readVersionFromPackageJson() (Tag, error) {
 	}, nil
 }
 
+func writeVersionToPackageJson(tag Tag) error {
+	content, err := os.ReadFile("package.json")
+	if err != nil {
+		return err
+	}
+
+	// Replace the version
+	re := regexp.MustCompile(`"version":\s*"[^"]*"`)
+	newVersion := fmt.Sprintf("%d.%d.%d", tag.Major, tag.Minor, tag.Patch)
+	updatedContent := re.ReplaceAllString(string(content), fmt.Sprintf(`"version": "%s"`, newVersion))
+
+	err = os.WriteFile("package.json", []byte(updatedContent), 0644)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func readVersionFromPubspecYaml() (Tag, error) {
 	content, err := os.ReadFile("pubspec.yaml")
 	if err != nil {
@@ -69,4 +88,32 @@ func readVersionFromPubspecYaml() (Tag, error) {
 		Minor: minor,
 		Patch: patch,
 	}, nil
+}
+
+func writeVersionToPubspecYaml(tag Tag, increment bool) error {
+	content, err := os.ReadFile("pubspec.yaml")
+	if err != nil {
+		return err
+	}
+
+	// Replace the version
+	re := regexp.MustCompile(`version:\s*(\d+\.\d+\.\d+)\+(\d+)`)
+	newVersion := fmt.Sprintf("%d.%d.%d", tag.Major, tag.Minor, tag.Patch)
+	updatedContent := re.ReplaceAllStringFunc(string(content), func(match string) string {
+		matches := re.FindStringSubmatch(match)
+		if len(matches) > 2 {
+			buildNumber, _ := strconv.Atoi(matches[2])
+			if increment {
+				buildNumber++
+			}
+			return fmt.Sprintf("version: %s+%d", newVersion, buildNumber)
+		}
+		return match
+	})
+
+	err = os.WriteFile("pubspec.yaml", []byte(updatedContent), 0644)
+	if err != nil {
+		return err
+	}
+	return nil
 }

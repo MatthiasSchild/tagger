@@ -38,6 +38,21 @@ and the date will be 1577867400 / (60 * 60 * 24)
 The time will be 1577867400 % (60 * 60 * 24)
   = 30600
 so the version will result in v1.18262.30600
+
+Writing the new version into file:
+With the --write flag, you can tell tagger to write the new version into a file.
+Tagger will check, if any uncommitted changes are open.
+The process will abort, if any uncommitted changes exist.
+Then it will calculate the new tag and write it into file (depending on the target).
+Afterwards, tagger will create a new commit with the tag as message and will tag this commit.
+You have the following targets as options:
+--write=npm for writing the version into the package.json
+	For this option, the version will have the format "major.minor.patch"
+--write=flutter for writing the version into the pubspec.yaml
+	For this option, the version will have the format "major.minor.patch+additional"
+	The additional part will be kept from what it was before
+--write=flutter+ for the same functionality like just "flutter"
+	But here, tagger tries to increment the additional part
 `
 
 var RootCmd = &cobra.Command{
@@ -89,6 +104,48 @@ var RootCmd = &cobra.Command{
 		}
 
 		if !flagDry {
+			if flagWrite != "" {
+				uncommittedChanges, err := hasUncommittedChanges()
+				if err != nil {
+					return fmt.Errorf("failed to check, if uncommitted changes exist: %v", err)
+				}
+				if uncommittedChanges {
+					return fmt.Errorf("cannot use 'write' flag, because there are uncommitted changes")
+				}
+
+				switch flagWrite {
+				case "npm":
+					err = writeVersionToPackageJson(newTag)
+					if err != nil {
+						return fmt.Errorf("failed to write package.json: %v", err)
+					}
+					err = commitAll(newTag.String())
+					if err != nil {
+						return fmt.Errorf("failed to create commit: %v", err)
+					}
+				case "flutter":
+					err = writeVersionToPubspecYaml(newTag, false)
+					if err != nil {
+						return fmt.Errorf("failed to write pubspec.yaml: %v", err)
+					}
+					err = commitAll(newTag.String())
+					if err != nil {
+						return fmt.Errorf("failed to create commit: %v", err)
+					}
+				case "flutter+":
+					err = writeVersionToPubspecYaml(newTag, true)
+					if err != nil {
+						return fmt.Errorf("failed to write pubspec.yaml: %v", err)
+					}
+					err = commitAll(newTag.String())
+					if err != nil {
+						return fmt.Errorf("failed to create commit: %v", err)
+					}
+				default:
+					return fmt.Errorf("unknown write option: %s", flagWrite)
+				}
+			}
+
 			err = createTag(newTag)
 			if err != nil {
 				return fmt.Errorf("failed to create tag: %s", err.Error())
@@ -265,4 +322,5 @@ func init() {
 	RootCmd.Flags().BoolVar(&flagDateTime, "datetime", false, "Set minor and patch to date time")
 	RootCmd.Flags().IntVar(&flagHash, "hash", 0, "Add commit hash to end")
 	RootCmd.Flags().BoolVarP(&flagDry, "dry", "d", false, "Show new tag but don't apply")
+	RootCmd.Flags().StringVar(&flagWrite, "write", "", "Write the version into file (see help)")
 }

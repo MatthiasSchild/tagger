@@ -1,5 +1,9 @@
 # Tagger Changelog
 
+## v1.4.0 - 2024-09-09
+
+- feat: Added write flag to write version before tagging
+
 ## v1.3.0 - 2024-09-08
 
 - feat: Added 'npm' command to tag depending on package.json

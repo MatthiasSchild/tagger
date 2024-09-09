@@ -73,3 +73,28 @@ func createTag(tag Tag) error {
 	}
 	return nil
 }
+
+func hasUncommittedChanges() (bool, error) {
+	cmd := exec.Command("git", "diff", "HEAD")
+	out, err := cmd.Output()
+	if err != nil {
+		return false, err
+	}
+
+	trimmedOutput := strings.Trim(string(out), "\r\n\t ")
+	return len(trimmedOutput) > 0, nil
+}
+
+func commitAll(message string) error {
+	cmd1 := exec.Command("git", "add", "--all")
+	err := cmd1.Run()
+	if err != nil {
+		return err
+	}
+	cmd2 := exec.Command("git", "commit", "-m", message)
+	err = cmd2.Run()
+	if err != nil {
+		return err
+	}
+	return nil
+}

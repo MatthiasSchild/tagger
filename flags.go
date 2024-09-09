@@ -11,6 +11,7 @@ var (
 	flagDateTime bool
 	flagHash     int
 	flagDry      bool
+	flagWrite    string
 )
 
 func validateFlags() error {
