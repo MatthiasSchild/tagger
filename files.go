@@ -59,10 +59,10 @@ func writeVersionToPackageJson(tag Tag) error {
 	return nil
 }
 
-func readVersionFromPubspecYaml() (Tag, error) {
+func readVersionFromPubspecYaml() (Tag, int, error) {
 	content, err := os.ReadFile("pubspec.yaml")
 	if err != nil {
-		return Tag{}, err
+		return Tag{}, 0, err
 	}
 
 	packageData := &struct {
@@ -71,23 +71,24 @@ func readVersionFromPubspecYaml() (Tag, error) {
 
 	err = yaml.Unmarshal(content, packageData)
 	if err != nil {
-		return Tag{}, err
+		return Tag{}, 0, err
 	}
 
 	groups := versionRegex.FindStringSubmatch(packageData.Version)
 	if groups == nil {
-		return Tag{}, fmt.Errorf("version in pubspec.yaml must have format '1.2.3+4'")
+		return Tag{}, 0, fmt.Errorf("version in pubspec.yaml must have format '1.2.3+4'")
 	}
 
 	major, _ := strconv.Atoi(groups[1])
 	minor, _ := strconv.Atoi(groups[2])
 	patch, _ := strconv.Atoi(groups[3])
+	build, _ := strconv.Atoi(groups[4][1:])
 
 	return Tag{
 		Major: major,
 		Minor: minor,
 		Patch: patch,
-	}, nil
+	}, build, nil
 }
 
 func writeVersionToPubspecYaml(tag Tag, increment bool) error {
@@ -109,6 +110,26 @@ func writeVersionToPubspecYaml(tag Tag, increment bool) error {
 			return fmt.Sprintf("version: %s+%d", newVersion, buildNumber)
 		}
 		return match
+	})
+
+	err = os.WriteFile("pubspec.yaml", []byte(updatedContent), 0644)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func writeVersionAndBuildToPubspecYaml(tag Tag, buildNumber int) error {
+	content, err := os.ReadFile("pubspec.yaml")
+	if err != nil {
+		return err
+	}
+
+	// Replace the version
+	re := regexp.MustCompile(`version:\s*([\d+-.]+)`)
+	newVersion := fmt.Sprintf("%d.%d.%d", tag.Major, tag.Minor, tag.Patch)
+	updatedContent := re.ReplaceAllStringFunc(string(content), func(match string) string {
+		return fmt.Sprintf("version: %s+%d", newVersion, buildNumber)
 	})
 
 	err = os.WriteFile("pubspec.yaml", []byte(updatedContent), 0644)

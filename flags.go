@@ -12,6 +12,7 @@ var (
 	flagHash     int
 	flagDry      bool
 	flagWrite    string
+	flagBuild    bool
 )
 
 func validateFlags() error {

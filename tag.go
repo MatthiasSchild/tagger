@@ -6,10 +6,11 @@ import (
 
 // Tag contains the individual information about a 3-part tag with optional addition
 type Tag struct {
-	Major    int
-	Minor    int
-	Patch    int
-	Addition string
+	Major         int
+	Minor         int
+	Patch         int
+	PlusAddition  string
+	MinusAddition string
 }
 
 // String builds the string dependent on the values of the structure,
@@ -18,8 +19,12 @@ type Tag struct {
 func (t Tag) String() string {
 	result := fmt.Sprintf("v%d.%d.%d", t.Major, t.Minor, t.Patch)
 
-	if len(t.Addition) > 0 {
-		result += "-" + t.Addition
+	if len(t.PlusAddition) > 0 {
+		result += "+" + t.PlusAddition
+	}
+
+	if len(t.MinusAddition) > 0 {
+		result += "-" + t.MinusAddition
 	}
 
 	return result
@@ -34,5 +39,5 @@ func (t Tag) Equals(tag Tag) bool {
 // Clone clones the Tag structure.
 // The addition will be removed from the copy.
 func (t Tag) Clone() Tag {
-	return Tag{t.Major, t.Minor, t.Patch, ""}
+	return Tag{t.Major, t.Minor, t.Patch, "", ""}
 }

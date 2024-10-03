@@ -30,7 +30,7 @@ func getAllGitTags() ([]Tag, error) {
 				continue
 			}
 
-			result = append(result, Tag{major, minor, patch, ""})
+			result = append(result, Tag{major, minor, patch, "", ""})
 		}
 	}
 

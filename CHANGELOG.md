@@ -1,5 +1,9 @@
 # Tagger Changelog
 
+## v1.4.1 - 2024-10-03
+
+- feat: Added build number increase flag to flutter command
+
 ## v1.4.0 - 2024-09-09
 
 - feat: Added write flag to write version before tagging

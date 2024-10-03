@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	versionRegex = regexp.MustCompile("^v?(\\d+)\\.(\\d+)\\.(\\d+)([+-]([a-zA-Z0-9]))?$")
+	versionRegex = regexp.MustCompile("^v?(\\d+)\\.(\\d+)\\.(\\d+)([+-]([a-zA-Z0-9]+))?$")
 )
 
 const rootCmdDescription = `---------------------------------
@@ -100,7 +100,7 @@ var RootCmd = &cobra.Command{
 				return fmt.Errorf("could not get current hash: %s", err.Error())
 			}
 
-			newTag.Addition = hash[:flagHash]
+			newTag.MinusAddition = hash[:flagHash]
 		}
 
 		if !flagDry {
@@ -199,10 +199,9 @@ var TagCmd = &cobra.Command{
 		minor, _ := strconv.Atoi(groups[2])
 		patch, _ := strconv.Atoi(groups[3])
 		newTag := Tag{
-			Major:    major,
-			Minor:    minor,
-			Patch:    patch,
-			Addition: "",
+			Major: major,
+			Minor: minor,
+			Patch: patch,
 		}
 
 		tags, err := getAllGitTags()
@@ -287,7 +286,7 @@ var FlutterCmd = &cobra.Command{
 	Long:         "Read the version from the pubspec.yaml file and tag the current commit this version",
 	SilenceUsage: true,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		newTag, err := readVersionFromPubspecYaml()
+		newTag, build, err := readVersionFromPubspecYaml()
 		if err != nil {
 			return err
 		}
@@ -303,9 +302,33 @@ var FlutterCmd = &cobra.Command{
 			}
 		}
 
-		err = createTag(newTag)
-		if err != nil {
-			return fmt.Errorf("failed to create tag: %s", err.Error())
+		if flagBuild {
+			newTag.PlusAddition = strconv.Itoa(build + 1)
+
+			if !flagDry {
+				uncommittedChanges, err := hasUncommittedChanges()
+				if err != nil {
+					return fmt.Errorf("failed to check, if uncommitted changes exist: %v", err)
+				}
+				if uncommittedChanges {
+					return fmt.Errorf("cannot use 'build' flag, because there are uncommitted changes")
+				}
+				err = writeVersionAndBuildToPubspecYaml(newTag, build+1)
+				if err != nil {
+					return fmt.Errorf("failed to update build number in pubspec.yaml: %v", err)
+				}
+				err = commitAll(newTag.String())
+				if err != nil {
+					return fmt.Errorf("failed to create commit: %v", err)
+				}
+			}
+		}
+
+		if !flagDry {
+			err = createTag(newTag)
+			if err != nil {
+				return fmt.Errorf("failed to create tag: %s", err.Error())
+			}
 		}
 
 		fmt.Printf("Tagged %s\n", newTag)
@@ -321,6 +344,8 @@ func init() {
 	RootCmd.Flags().BoolVar(&flagPatch, "patch", false, "Increase patch part")
 	RootCmd.Flags().BoolVar(&flagDateTime, "datetime", false, "Set minor and patch to date time")
 	RootCmd.Flags().IntVar(&flagHash, "hash", 0, "Add commit hash to end")
-	RootCmd.Flags().BoolVarP(&flagDry, "dry", "d", false, "Show new tag but don't apply")
+	RootCmd.PersistentFlags().BoolVarP(&flagDry, "dry", "d", false, "Show new tag but don't apply")
 	RootCmd.Flags().StringVar(&flagWrite, "write", "", "Write the version into file (see help)")
+
+	FlutterCmd.Flags().BoolVar(&flagBuild, "build", false, "Increase build number and tag with +build")
 }
