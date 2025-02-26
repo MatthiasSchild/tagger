@@ -84,7 +84,7 @@ var RootCmd = &cobra.Command{
 		} else if flagMinor {
 			newTag.Minor++
 			newTag.Patch = 0
-		} else {
+		} else if flagPatch {
 			newTag.Patch++
 		}
 
@@ -296,9 +296,11 @@ var FlutterCmd = &cobra.Command{
 			return fmt.Errorf("failed to fetch git tags for validation: %s", err.Error())
 		}
 
-		for _, tag := range tags {
-			if tag.Equals(newTag) {
-				return fmt.Errorf("version tag already created: %s", tag.String())
+		if !flagBuild {
+			for _, tag := range tags {
+				if tag.Equals(newTag) {
+					return fmt.Errorf("version tag already created: %s", tag.String())
+				}
 			}
 		}
 

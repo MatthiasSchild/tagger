@@ -16,8 +16,8 @@ var (
 )
 
 func validateFlags() error {
-	// When neither major, minor, patch nor datetime is set, set patch
-	if !flagMajor && !flagMinor && !flagPatch && !flagDateTime {
+	// When neither major, minor, patch, datetime nor hash is set, set patch
+	if !flagMajor && !flagMinor && !flagPatch && !flagDateTime && flagHash == 0 {
 		flagPatch = true
 	}
 
