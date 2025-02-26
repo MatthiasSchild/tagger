@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os/exec"
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -16,22 +17,32 @@ func getAllGitTags() ([]Tag, error) {
 		return nil, err
 	}
 
-	tags := strings.Split(string(out), "\n")
-	for _, tag := range tags {
-		pattern := "^v([0-9]+)\\.([0-9]+)\\.([0-9]+)$"
+	rawTags := strings.Split(string(out), "\n")
+	cleanTags := make([]string, 0)
+
+	for _, tag := range rawTags {
+		pattern := "^v([0-9]+)\\.([0-9]+)\\.([0-9]+)([+-][a-zA-Z0-9]+)?$"
 		matched, err := regexp.MatchString(pattern, tag)
 		if err != nil {
 			continue
 		}
 		if matched {
-			var major, minor, patch int
-			_, err = fmt.Sscanf(tag, "v%d.%d.%d", &major, &minor, &patch)
-			if err != nil {
-				continue
+			cleanTag := strings.SplitN(strings.SplitN(tag, "+", 2)[0], "-", 2)[0]
+			if !slices.Contains(cleanTags, cleanTag) {
+				cleanTags = append(cleanTags, cleanTag)
 			}
-
-			result = append(result, Tag{major, minor, patch, "", ""})
 		}
+	}
+
+	for _, tag := range cleanTags {
+		var major, minor, patch int
+
+		_, err = fmt.Sscanf(tag, "v%d.%d.%d", &major, &minor, &patch)
+		if err != nil {
+			continue
+		}
+
+		result = append(result, Tag{major, minor, patch, "", ""})
 	}
 
 	return result, nil
