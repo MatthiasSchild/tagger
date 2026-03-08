@@ -3,10 +3,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"regexp"
 	"strconv"
 
+	"github.com/MatthiasSchild/tagger/utils"
+	"github.com/pelletier/go-toml/v2"
 	"gopkg.in/yaml.v3"
 )
 
@@ -133,6 +136,63 @@ func writeVersionAndBuildToPubspecYaml(tag Tag, buildNumber int) error {
 	})
 
 	err = os.WriteFile("pubspec.yaml", []byte(updatedContent), 0644)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func readVersionFromCargoToml() (Tag, error) {
+	content, err := os.ReadFile("Cargo.toml")
+	if err != nil {
+		return Tag{}, err
+	}
+
+	packageData := &struct {
+		Package struct {
+			Version string `toml:"version"`
+		} `toml:"package"`
+	}{}
+
+	err = toml.Unmarshal(content, packageData)
+	if err != nil {
+		return Tag{}, err
+	}
+	log.Println(packageData.Package.Version)
+
+	groups := versionRegex.FindStringSubmatch(packageData.Package.Version)
+	if groups == nil {
+		return Tag{}, fmt.Errorf("version in Cargo.toml must have format '1.2.3'")
+	}
+
+	major, _ := strconv.Atoi(groups[1])
+	minor, _ := strconv.Atoi(groups[2])
+	patch, _ := strconv.Atoi(groups[3])
+
+	return Tag{
+		Major: major,
+		Minor: minor,
+		Patch: patch,
+	}, nil
+}
+
+func writeVersionToCargoToml(tag Tag) error {
+	content, err := os.ReadFile("Cargo.toml")
+	if err != nil {
+		return err
+	}
+
+	updatedContent := utils.UpdateVersionInToml(
+		string(content),
+		tag.StringSimple()[1:],
+	)
+
+	// // Replace the version
+	// re := regexp.MustCompile(`"version":\s*"[^"]*"`)
+	// newVersion := fmt.Sprintf("%d.%d.%d", tag.Major, tag.Minor, tag.Patch)
+	// updatedContent := re.ReplaceAllString(string(content), fmt.Sprintf(`"version": "%s"`, newVersion))
+
+	err = os.WriteFile("Cargo.toml", []byte(updatedContent), 0644)
 	if err != nil {
 		return err
 	}

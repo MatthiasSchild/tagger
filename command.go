@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	versionRegex = regexp.MustCompile("^v?(\\d+)\\.(\\d+)\\.(\\d+)([+-]([a-zA-Z0-9]+))?$")
+	versionRegex = regexp.MustCompile(`^v?(\d+)\\.(\d+)\\.(\d+)([+-]([a-zA-Z0-9]+))?$`)
 )
 
 const rootCmdDescription = `---------------------------------
@@ -53,6 +53,8 @@ You have the following targets as options:
 	The additional part will be kept from what it was before
 --write=flutter+ for the same functionality like just "flutter"
 	But here, tagger tries to increment the additional part
+--write=cargo for writing the version into the Cargo.toml
+  For this option, the version will have the format "major.minor.patch"
 `
 
 var RootCmd = &cobra.Command{
@@ -136,6 +138,15 @@ var RootCmd = &cobra.Command{
 					err = writeVersionToPubspecYaml(newTag, true)
 					if err != nil {
 						return fmt.Errorf("failed to write pubspec.yaml: %v", err)
+					}
+					err = commitAll(newTag.String())
+					if err != nil {
+						return fmt.Errorf("failed to create commit: %v", err)
+					}
+				case "cargo":
+					err = writeVersionToCargoToml(newTag)
+					if err != nil {
+						return fmt.Errorf("failed to write Cargo.toml: %v", err)
 					}
 					err = commitAll(newTag.String())
 					if err != nil {
@@ -338,8 +349,40 @@ var FlutterCmd = &cobra.Command{
 	},
 }
 
+var CargoCmd = &cobra.Command{
+	Use:          "cargo",
+	Short:        "Tag commit using Cargo.toml",
+	Long:         "Read the version from the Cargo.toml file and tag the current commit this version",
+	SilenceUsage: true,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		newTag, err := readVersionFromCargoToml()
+		if err != nil {
+			return err
+		}
+
+		tags, err := getAllGitTags()
+		if err != nil {
+			return fmt.Errorf("failed to fetch git tags for validation: %v", err)
+		}
+
+		for _, tag := range tags {
+			if tag.Equals(newTag) {
+				return fmt.Errorf("version tag already created: %s", tag.String())
+			}
+		}
+
+		err = createTag(newTag)
+		if err != nil {
+			return fmt.Errorf("failed to create tag: %v", err)
+		}
+
+		fmt.Printf("Tagged %s\n", newTag)
+		return nil
+	},
+}
+
 func init() {
-	RootCmd.AddCommand(TagCmd, ListCmd, NpmCmd, FlutterCmd)
+	RootCmd.AddCommand(TagCmd, ListCmd, NpmCmd, FlutterCmd, CargoCmd)
 
 	RootCmd.Flags().BoolVar(&flagMajor, "major", false, "Increase major part")
 	RootCmd.Flags().BoolVar(&flagMinor, "minor", false, "Increase minor part")

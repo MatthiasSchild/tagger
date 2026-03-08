@@ -17,7 +17,7 @@ type Tag struct {
 // resulting in a 3-part version (e.g. v1.2.3).
 // When addition is set, it will be added with a hyphen (e.g. v1.2.3-1fa342)
 func (t Tag) String() string {
-	result := fmt.Sprintf("v%d.%d.%d", t.Major, t.Minor, t.Patch)
+	result := t.StringSimple()
 
 	if len(t.PlusAddition) > 0 {
 		result += "+" + t.PlusAddition
@@ -28,6 +28,12 @@ func (t Tag) String() string {
 	}
 
 	return result
+}
+
+// String builds the string dependent on the values of the structure,
+// resulting in a 3-part version (e.g. v1.2.3).
+func (t Tag) StringSimple() string {
+	return fmt.Sprintf("v%d.%d.%d", t.Major, t.Minor, t.Patch)
 }
 
 // Equals checks if the major, minor and the patch part of two versions are equal.
